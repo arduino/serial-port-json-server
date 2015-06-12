@@ -85,8 +85,8 @@ type serialhub struct {
 }
 
 type SpPortList struct {
-	SerialPorts  []SpPortItem
-	NetworkPorts []SpPortItem
+	Ports   []SpPortItem
+	Network bool
 }
 
 type SpPortItem struct {
@@ -453,13 +453,7 @@ func spListDual(network bool) {
 	// to append the open/close state, baud rates, etc to make
 	// a super clean nice list to send back to browser
 	n := len(list)
-	spl := SpPortList{make([]SpPortItem, n, n), make([]SpPortItem, n, n)}
-
-	ports := spl.SerialPorts
-
-	if network {
-		ports = spl.NetworkPorts
-	}
+	spl := SpPortList{make([]SpPortItem, n, n), network}
 
 	ctr := 0
 	for _, item := range list {
@@ -477,7 +471,7 @@ func spListDual(network bool) {
 			AvailableBufferAlgorithms []string
 			Ver                       float32
 		*/
-		ports[ctr] = SpPortItem{
+		spl.Ports[ctr] = SpPortItem{
 			Name:                      item.Name,
 			Friendly:                  item.FriendlyName,
 			SerialNumber:              item.SerialNumber,
@@ -493,15 +487,15 @@ func spListDual(network bool) {
 		}
 
 		// figure out if port is open
-		//ports[ctr].IsOpen = false
+		//spl.Ports[ctr].IsOpen = false
 		myport, isFound := findPortByName(item.Name)
 
 		if isFound {
 			// we found our port
-			ports[ctr].IsOpen = true
-			ports[ctr].Baud = myport.portConf.Baud
-			ports[ctr].BufferAlgorithm = myport.BufferType
-			ports[ctr].IsPrimary = myport.IsPrimary
+			spl.Ports[ctr].IsOpen = true
+			spl.Ports[ctr].Baud = myport.portConf.Baud
+			spl.Ports[ctr].BufferAlgorithm = myport.BufferType
+			spl.Ports[ctr].IsPrimary = myport.IsPrimary
 		}
 		//ls += "{ \"name\" : \"" + item.Name + "\", \"friendly\" : \"" + item.FriendlyName + "\" },\n"
 		ctr++
