@@ -1,6 +1,7 @@
 serial-port-json-server
 =======================
 
+
 Get the latest version of the Bridge for all supported platforms: http://downloads.arduino.cc/CreateBridge/CreateBridge.zip
 
 Version 1.82
