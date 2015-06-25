@@ -79,7 +79,7 @@ compilePlatform()
 }
 
 extractVersionFromMain
-compilePlatform darwin amd64 o32-clang 1
+compilePlatform darwin 386 o32-clang 1
 #compilePlatformLinux linux 386 gcc
 compilePlatform linux amd64 gcc 1
 compilePlatform linux arm 0
