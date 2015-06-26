@@ -3,6 +3,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
@@ -94,20 +95,47 @@ func computeMd5(filePath string) ([]byte, error) {
 	return hash.Sum(result), nil
 }
 
-func pipe_commands(commands ...*exec.Cmd) ([]byte, error) {
-	for i, command := range commands[:len(commands)-1] {
-		out, err := command.StdoutPipe()
-		if err != nil {
-			return nil, err
+func call(stack []*exec.Cmd, pipes []*io.PipeWriter) (err error) {
+	if stack[0].Process == nil {
+		if err = stack[0].Start(); err != nil {
+			return err
 		}
-		command.Start()
-		commands[i+1].Stdin = out
 	}
-	final, err := commands[len(commands)-1].Output()
-	if err != nil {
+	if len(stack) > 1 {
+		if err = stack[1].Start(); err != nil {
+			return err
+		}
+		defer func() {
+			if err == nil {
+				pipes[0].Close()
+				err = call(stack[1:], pipes[1:])
+			}
+		}()
+	}
+	return stack[0].Wait()
+}
+
+// code inspired by https://gist.github.com/tyndyll/89fbb2c2273f83a074dc
+func pipe_commands(commands ...*exec.Cmd) ([]byte, error) {
+	var errorBuffer, outputBuffer bytes.Buffer
+	pipeStack := make([]*io.PipeWriter, len(commands)-1)
+	i := 0
+	for ; i < len(commands)-1; i++ {
+		stdinPipe, stdoutPipe := io.Pipe()
+		commands[i].Stdout = stdoutPipe
+		commands[i].Stderr = &errorBuffer
+		commands[i+1].Stdin = stdinPipe
+		pipeStack[i] = stdoutPipe
+	}
+	commands[i].Stdout = &outputBuffer
+	commands[i].Stderr = &errorBuffer
+
+	if err := call(commands, pipeStack); err != nil {
+		logger.Errorf(string(errorBuffer.Bytes()), err)
 		return nil, err
 	}
-	return final, nil
+
+	return outputBuffer.Bytes(), nil
 }
 
 func getBoardName(pid string) (string, string, error) {
