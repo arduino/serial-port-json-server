@@ -31,6 +31,7 @@ package main
 import (
 	"github.com/oleksandr/bonjour"
 	"log"
+	"net/http"
 	"strings"
 	"time"
 )
@@ -53,7 +54,6 @@ func GetNetworkList() ([]OsSerialPort, error) {
 
 	for index, p1 := range tmp {
 		for _, p2 := range newPorts {
-			log.Printf("compare %d: %+v %+1v", index, p1, p2)
 			if p1.Name == p2.Name && p2.FriendlyName == p2.FriendlyName {
 				copy(SavedNetworkPorts[index:], SavedNetworkPorts[index+1:])
 				SavedNetworkPorts[len(SavedNetworkPorts)-1] = OsSerialPort{}
@@ -62,9 +62,28 @@ func GetNetworkList() ([]OsSerialPort, error) {
 		}
 	}
 
+	SavedNetworkPorts, err = pruneUnreachablePorts(SavedNetworkPorts)
+	if err != nil {
+		return nil, err
+	}
+
 	SavedNetworkPorts = append(SavedNetworkPorts, newPorts...)
 
-	return newPorts, nil
+	return SavedNetworkPorts, nil
+}
+
+func pruneUnreachablePorts(ports []OsSerialPort) ([]OsSerialPort, error) {
+	tmp := ports
+
+	for index, port := range tmp {
+		res, err := http.Head("http://" + port.Name)
+		if err != nil || res.StatusCode != 200 {
+			copy(ports[index:], ports[index+1:])
+			ports[len(ports)-1] = OsSerialPort{}
+			ports = ports[:len(ports)-1]
+		}
+	}
+	return ports, nil
 }
 
 func getPorts() ([]OsSerialPort, error) {
