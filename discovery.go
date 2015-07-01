@@ -46,6 +46,7 @@ var SavedNetworkPorts []OsSerialPort
 // the bonjour module, then we prune the boards who don't respond to a ping
 func GetNetworkList() ([]OsSerialPort, error) {
 	newPorts, err := getPorts()
+	log.Println("newports", newPorts)
 	if err != nil {
 		return nil, err
 	}
@@ -93,13 +94,15 @@ func getPorts() ([]OsSerialPort, error) {
 		return nil, err
 	}
 
+	results := make(chan *bonjour.ServiceEntry)
+
 	timeout := make(chan bool, 1)
 	go func(exitCh chan<- bool) {
 		time.Sleep(timeoutConst * time.Second)
 		exitCh <- true
+		close(results)
 	}(resolver.Exit)
 
-	results := make(chan *bonjour.ServiceEntry)
 	arrPorts := []OsSerialPort{}
 	go func(results chan *bonjour.ServiceEntry, exitCh chan<- bool) {
 		for e := range results {
@@ -123,7 +126,6 @@ func getPorts() ([]OsSerialPort, error) {
 	// wait for some kind of timeout and return arrPorts
 	select {
 	case <-timeout:
-		close(results)
 		return arrPorts, nil
 	}
 }
