@@ -446,11 +446,18 @@ func discoverLoop() {
 	NetworkPorts.Network = true
 	NetworkPorts.Ports = make([]SpPortItem, 0)
 
-	for {
-		spListDual(false)
-		spListDual(true)
-		time.Sleep(2 * time.Second)
-	}
+	go func() {
+		for {
+			spListDual(false)
+			time.Sleep(2 * time.Second)
+		}
+	}()
+	go func() {
+		for {
+			spListDual(true)
+			time.Sleep(2 * time.Second)
+		}
+	}()
 }
 
 func spListDual(network bool) {
