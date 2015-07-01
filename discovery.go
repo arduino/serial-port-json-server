@@ -96,7 +96,6 @@ func getPorts() ([]OsSerialPort, error) {
 	timeout := make(chan bool, 1)
 	go func(exitCh chan<- bool) {
 		time.Sleep(timeoutConst * time.Second)
-		timeout <- true
 		exitCh <- true
 	}(resolver.Exit)
 
@@ -113,6 +112,7 @@ func getPorts() ([]OsSerialPort, error) {
 			}
 			arrPorts = append(arrPorts, OsSerialPort{Name: e.AddrIPv4.String(), FriendlyName: e.Instance, NetworkPort: true, RelatedNames: boardInfosSlice})
 		}
+		timeout <- true
 	}(results, resolver.Exit)
 
 	err = resolver.Browse("_arduino._tcp", "", results)

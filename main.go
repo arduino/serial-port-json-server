@@ -250,6 +250,8 @@ func startDaemon() {
 		// launch our dummy data routine
 		//go d.run()
 
+		go discoverLoop()
+
 		go func() {
 			http.HandleFunc("/", homeHandler)
 			http.HandleFunc("/ws", wsHandler)

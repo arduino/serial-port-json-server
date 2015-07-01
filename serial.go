@@ -18,7 +18,7 @@ import (
 	"runtime/debug"
 	"strconv"
 	"strings"
-	//"time"
+	"time"
 )
 
 type writeRequest struct {
@@ -103,6 +103,12 @@ type SpPortItem struct {
 	Ver                       float32
 	NetworkPort               bool
 }
+
+// SerialPorts contains the ports attached to the machine
+var SerialPorts SpPortList
+
+// NetworkPorts contains the ports on the network
+var NetworkPorts SpPortList
 
 var sh = serialhub{
 	//write:   	make(chan *serport, chan []byte),
@@ -415,9 +421,36 @@ func writeToChannels(cmds []string, idArr []string, bufTypeArr []string) {
 
 }
 
-func spList() {
-	go spListDual(true)
-	go spListDual(false)
+// spList broadcasts a Json representation of the ports found
+func spList(network bool) {
+	var list SpPortList
+	if network {
+		list = NetworkPorts
+	} else {
+		list = SerialPorts
+	}
+	ls, err := json.MarshalIndent(list, "", "\t")
+	if err != nil {
+		log.Println(err)
+		h.broadcastSys <- []byte("Error creating json on port list " +
+			err.Error())
+	} else {
+		h.broadcastSys <- ls
+	}
+}
+
+// discoverLoop periodically update the list of ports found
+func discoverLoop() {
+	SerialPorts.Network = false
+	SerialPorts.Ports = make([]SpPortItem, 0)
+	NetworkPorts.Network = true
+	NetworkPorts.Ports = make([]SpPortItem, 0)
+
+	for {
+		spListDual(false)
+		spListDual(true)
+		time.Sleep(2 * time.Second)
+	}
 }
 
 func spListDual(network bool) {
@@ -501,15 +534,10 @@ func spListDual(network bool) {
 		ctr++
 	}
 
-	ls, err := json.MarshalIndent(spl, "", "\t")
-	if err != nil {
-		log.Println(err)
-		h.broadcastSys <- []byte("Error creating json on port list " +
-			err.Error())
+	if network {
+		NetworkPorts = spl
 	} else {
-		//log.Print("Printing out json byte data...")
-		//log.Print(ls)
-		h.broadcastSys <- ls
+		SerialPorts = spl
 	}
 }
 
