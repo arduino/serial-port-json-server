@@ -46,7 +46,6 @@ var SavedNetworkPorts []OsSerialPort
 // the bonjour module, then we prune the boards who don't respond to a ping
 func GetNetworkList() ([]OsSerialPort, error) {
 	newPorts, err := getPorts()
-	log.Println("newports", newPorts)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +87,6 @@ func pruneUnreachablePorts(ports []OsSerialPort) ([]OsSerialPort, error) {
 			copy(ports[index:], ports[index+1:])
 			ports[len(ports)-1] = OsSerialPort{}
 			ports = ports[:len(ports)-1]
-			log.Println("TIMEOUT?", err, res)
 		}
 	}
 	return ports, nil
