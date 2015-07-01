@@ -200,7 +200,8 @@ func checkCmd(m []byte) {
 		go spWrite(s)
 
 	} else if strings.HasPrefix(sl, "list") {
-		go spList()
+		go spList(false)
+		go spList(true)
 		// log.Println("Stack info", runtime.NumGoroutine())
 		// if runtime.NumGoroutine() > 30 {
 		// 	output := make([]byte, 1<<16)
