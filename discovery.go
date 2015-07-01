@@ -76,7 +76,7 @@ func GetNetworkList() ([]OsSerialPort, error) {
 func pruneUnreachablePorts(ports []OsSerialPort) ([]OsSerialPort, error) {
 	tmp := ports
 
-	timeout := time.Duration(1 * time.Second)
+	timeout := time.Duration(2 * time.Second)
 	client := http.Client{
 		Timeout: timeout,
 	}
@@ -88,6 +88,7 @@ func pruneUnreachablePorts(ports []OsSerialPort) ([]OsSerialPort, error) {
 			copy(ports[index:], ports[index+1:])
 			ports[len(ports)-1] = OsSerialPort{}
 			ports = ports[:len(ports)-1]
+			log.Println("TIMEOUT?", err, res)
 		}
 	}
 	return ports, nil
