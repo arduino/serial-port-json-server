@@ -254,7 +254,7 @@ func startDaemon() {
 
 		go func() {
 			http.HandleFunc("/", homeHandler)
-			http.HandleFunc("/ws", wsHandler)
+			http.Handle("/socket.io/", wsHandler())
 			http.HandleFunc("/upload", uploadHandler)
 
 			if err := http.ListenAndServeTLS(*addrSSL, filepath.Join(dest, "cert.pem"), filepath.Join(dest, "key.pem"), nil); err != nil {
@@ -280,10 +280,11 @@ const homeTemplateHtml = `<!DOCTYPE html>
 <head>
 <title>Serial Port Example</title>
 <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.5/socket.io.min.js"></script>
 <script type="text/javascript">
     $(function() {
 
-    var conn;
+    var socket;
     var msg = $("#msg");
     var log = $("#log");
 
@@ -297,29 +298,29 @@ const homeTemplateHtml = `<!DOCTYPE html>
     }
 
     $("#form").submit(function() {
-        if (!conn) {
+        if (!socket) {
             return false;
         }
         if (!msg.val()) {
             return false;
         }
-        conn.send(msg.val() + "\n");
+        socket.emit("command", msg.val());
         msg.val("");
         return false
     });
 
     if (window["WebSocket"]) {
     	if (window.location.protocol === 'https:') {
-    		conn = new WebSocket("wss://{{$}}/ws");
+    		socket = io('https://{{$}}')
     	} else {
-    		conn = new WebSocket("ws://{{$}}/ws");
+    		socket = io("http://{{$}}");
     	}
-        conn.onclose = function(evt) {
+        socket.on("disconnect", function(evt) {
             appendLog($("<div><b>Connection closed.</b></div>"))
-        }
-        conn.onmessage = function(evt) {
-            appendLog($("<div/>").text(evt.data))
-        }
+        });
+        socket.on("message", function(evt) {
+            appendLog($("<div/>").text(evt))
+        });
     } else {
         appendLog($("<div><b>Your browser does not support WebSockets.</b></div>"))
     }
