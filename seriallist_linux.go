@@ -74,14 +74,6 @@ func removeNonArduinoBoards(ports []OsSerialPort) []OsSerialPort {
 	return arduino_ports
 }
 
-func removePortFromSlice(a []OsSerialPort, i int) []OsSerialPort {
-	if i < len(a)-1 {
-		copy(a[i:], a[i+1:])
-	}
-	a = a[:len(a)-1]
-	return a
-}
-
 func getList() ([]OsSerialPort, os.SyscallError) {
 
 	//return getListViaTtyList()
