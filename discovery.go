@@ -72,14 +72,21 @@ func GetNetworkList() ([]OsSerialPort, error) {
 }
 
 func pruneUnreachablePorts(ports []OsSerialPort) ([]OsSerialPort, error) {
-	timeout := time.Duration(2 * time.Second)
+	timeout := time.Duration(5 * time.Second)
+	times := 3
 	client := http.Client{
 		Timeout: timeout,
 	}
 
 	ports = Filter(ports, func(port OsSerialPort) bool {
-		res, err := client.Head("http://" + port.Name)
-		return err == nil && res.StatusCode == 200
+		any := false
+		for i := 0; i < times && !any; i++ {
+			res, err := client.Head("http://" + port.Name)
+			if err == nil && res.StatusCode == 200 {
+				any = true
+			}
+		}
+		return any
 	})
 
 	return ports, nil
