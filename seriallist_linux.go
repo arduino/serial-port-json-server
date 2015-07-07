@@ -39,8 +39,7 @@ func removeNonArduinoBoards(ports []OsSerialPort) []OsSerialPort {
 		cmdOutSlice = append(cmdOutSlice, re.FindString(element))
 	}
 
-	var arduino_ports []OsSerialPort
-	other_ports := ports
+	var arduino_ports, other_ports []OsSerialPort
 
 	for _, element := range cmdOutSlice {
 
@@ -50,8 +49,7 @@ func removeNonArduinoBoards(ports []OsSerialPort) []OsSerialPort {
 
 		archBoardName, boardName, _ := getBoardName(element)
 
-		for i, port := range ports {
-
+		for _, port := range ports {
 			ueventcmd := exec.Command("cat", "/sys/class/tty/"+filepath.Base(port.Name)+"/device/uevent")
 			grep3cmd := exec.Command("grep", "PRODUCT=")
 			cutcmd := exec.Command("cut", "-f2", "-d/")
@@ -63,7 +61,8 @@ func removeNonArduinoBoards(ports []OsSerialPort) []OsSerialPort {
 				port.RelatedNames = append(port.RelatedNames, archBoardName)
 				port.FriendlyName = strings.Trim(boardName, "\n")
 				arduino_ports = append(arduino_ports, port)
-				other_ports = removePortFromSlice(other_ports, i)
+			} else {
+				other_ports = append(other_ports, port)
 			}
 		}
 	}
@@ -73,14 +72,6 @@ func removeNonArduinoBoards(ports []OsSerialPort) []OsSerialPort {
 	arduino_ports = append(arduino_ports, other_ports...)
 
 	return arduino_ports
-}
-
-func removePortFromSlice(a []OsSerialPort, i int) []OsSerialPort {
-	if i < len(a)-1 {
-		copy(a[i:], a[i+1:])
-	}
-	a = a[:len(a)-1]
-	return a
 }
 
 func getList() ([]OsSerialPort, os.SyscallError) {
