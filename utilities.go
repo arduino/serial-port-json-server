@@ -263,3 +263,14 @@ func createGlobalConfigMap(m *map[string]interface{}) {
 	//var config Combo
 	json.Unmarshal(file, m)
 }
+
+// Filter returns a new slice containing all OsSerialPort in the slice that satisfy the predicate f.
+func Filter(vs []OsSerialPort, f func(OsSerialPort) bool) []OsSerialPort {
+	var vsf []OsSerialPort
+	for _, v := range vs {
+		if f(v) {
+			vsf = append(vsf, v)
+		}
+	}
+	return vsf
+}

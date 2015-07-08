@@ -50,17 +50,16 @@ func GetNetworkList() ([]OsSerialPort, error) {
 		return nil, err
 	}
 
-	tmp := SavedNetworkPorts
-
-	for index, p1 := range tmp {
-		for _, p2 := range newPorts {
-			if p1.Name == p2.Name && p2.FriendlyName == p2.FriendlyName {
-				copy(SavedNetworkPorts[index:], SavedNetworkPorts[index+1:])
-				SavedNetworkPorts[len(SavedNetworkPorts)-1] = OsSerialPort{}
-				SavedNetworkPorts = SavedNetworkPorts[:len(SavedNetworkPorts)-1]
+	SavedNetworkPorts = Filter(SavedNetworkPorts, func(port OsSerialPort) bool {
+		any := true
+		for _, p := range SavedNetworkPorts {
+			if p.Name == port.Name && p.FriendlyName == port.FriendlyName {
+				any = false
+				return any
 			}
 		}
-	}
+		return any
+	})
 
 	SavedNetworkPorts, err = pruneUnreachablePorts(SavedNetworkPorts)
 	if err != nil {
@@ -73,22 +72,16 @@ func GetNetworkList() ([]OsSerialPort, error) {
 }
 
 func pruneUnreachablePorts(ports []OsSerialPort) ([]OsSerialPort, error) {
-	tmp := ports
-
 	timeout := time.Duration(2 * time.Second)
 	client := http.Client{
 		Timeout: timeout,
 	}
 
-	for index, port := range tmp {
+	ports = Filter(ports, func(port OsSerialPort) bool {
 		res, err := client.Head("http://" + port.Name)
+		return err == nil && res.StatusCode == 200
+	})
 
-		if err != nil || res.StatusCode != 200 {
-			copy(ports[index:], ports[index+1:])
-			ports[len(ports)-1] = OsSerialPort{}
-			ports = ports[:len(ports)-1]
-		}
-	}
 	return ports, nil
 }
 
