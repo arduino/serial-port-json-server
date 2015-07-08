@@ -68,8 +68,6 @@ func removeNonArduinoBoards(ports []OsSerialPort) []OsSerialPort {
 		}
 	}
 
-	log.Println("other_ports")
-	log.Println(other_ports)
 	arduino_ports = append(arduino_ports, other_ports...)
 
 	return arduino_ports
