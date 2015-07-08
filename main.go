@@ -14,15 +14,13 @@ import (
 	"github.com/kardianos/osext"
 	//"github.com/sanbornm/go-selfupdate/selfupdate" #included in update.go to change heavily
 	//"github.com/sanderhahn/gozip"
+	"github.com/gin-gonic/gin"
+	"github.com/itsjamie/gin-cors"
+	"github.com/kardianos/service"
+	"github.com/vharitonsky/iniflags"
 	"runtime/debug"
 	"text/template"
 	"time"
-
-	"github.com/kardianos/service"
-
-	"github.com/vharitonsky/iniflags"
-
-	"github.com/gin-gonic/gin"
 )
 
 var (
@@ -253,15 +251,26 @@ func startDaemon() {
 
 		go discoverLoop()
 
-		r := gin.Default()
+		r := gin.New()
 
 		socketHandler := wsHandler().ServeHTTP
 
+		r.Use(cors.Middleware(cors.Config{
+			Origins:         "https://create.arduino.cc, http://webide.arduino.cc:8080",
+			Methods:         "GET, PUT, POST, DELETE",
+			RequestHeaders:  "Origin, Authorization, Content-Type",
+			ExposedHeaders:  "",
+			MaxAge:          50 * time.Second,
+			Credentials:     true,
+			ValidateHeaders: false,
+		}))
+
 		r.GET("/", homeHandler)
 		r.GET("/upload", uploadHandler)
-		r.GET("/socket.io", socketHandler)
-		r.POST("/socket.io", socketHandler)
-
+		r.GET("/socket.io/", socketHandler)
+		r.POST("/socket.io/", socketHandler)
+		r.Handle("WS", "/socket.io/", socketHandler)
+		r.Handle("WSS", "/socket.io/", socketHandler)
 		go func() {
 			if err := r.RunTLS(*addrSSL, filepath.Join(dest, "cert.pem"), filepath.Join(dest, "key.pem")); err != nil {
 				fmt.Printf("Error trying to bind to port: %v, so exiting...", err)
