@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"go/build"
 	"log"
-	"net/http"
 	"os"
 	"path/filepath"
 	//"net/http/pprof"
@@ -22,6 +21,8 @@ import (
 	"github.com/kardianos/service"
 
 	"github.com/vharitonsky/iniflags"
+
+	"github.com/gin-gonic/gin"
 )
 
 var (
@@ -73,8 +74,8 @@ func defaultAssetPath() string {
 	return p.Dir
 }
 
-func homeHandler(c http.ResponseWriter, req *http.Request) {
-	homeTemplate.Execute(c, req.Host)
+func homeHandler(c *gin.Context) {
+	homeTemplate.Execute(c.Writer, c.Request.Host)
 }
 
 func launchSelfLater() {
@@ -252,18 +253,23 @@ func startDaemon() {
 
 		go discoverLoop()
 
-		go func() {
-			http.HandleFunc("/", homeHandler)
-			http.Handle("/socket.io/", wsHandler())
-			http.HandleFunc("/upload", uploadHandler)
+		r := gin.Default()
 
-			if err := http.ListenAndServeTLS(*addrSSL, filepath.Join(dest, "cert.pem"), filepath.Join(dest, "key.pem"), nil); err != nil {
+		socketHandler := wsHandler().ServeHTTP
+
+		r.GET("/", homeHandler)
+		r.GET("/upload", uploadHandler)
+		r.GET("/socket.io", socketHandler)
+		r.POST("/socket.io", socketHandler)
+
+		go func() {
+			if err := r.RunTLS(*addrSSL, filepath.Join(dest, "cert.pem"), filepath.Join(dest, "key.pem")); err != nil {
 				fmt.Printf("Error trying to bind to port: %v, so exiting...", err)
 				log.Fatal("Error ListenAndServe:", err)
 			}
 		}()
 
-		if err := http.ListenAndServe(*addr, nil); err != nil {
+		if err := r.Run(*addr); err != nil {
 			fmt.Printf("Error trying to bind to port: %v, so exiting...", err)
 			log.Fatal("Error ListenAndServe:", err)
 		}
