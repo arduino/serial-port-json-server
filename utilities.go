@@ -146,7 +146,6 @@ func getBoardName(pid string) (string, string, error) {
 	findAllPIDs(globalConfigMap)
 
 	list, _ := searchFor(globalConfigMap, []string{"pid"}, pid)
-	fmt.Println("pid ", list)
 
 	var archBoardNameSlice []string
 	archBoardName := ""
@@ -159,10 +158,8 @@ func getBoardName(pid string) (string, string, error) {
 	}
 
 	boardPath := append(archBoardNameSlice, "name")
-	fmt.Println(boardPath)
 
 	boardName := getElementFromMapWithList(globalConfigMap, boardPath).(string)
-	fmt.Println(boardName)
 
 	return archBoardName, boardName, nil
 }
