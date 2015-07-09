@@ -71,27 +71,36 @@ func GetNetworkList() ([]OsSerialPort, error) {
 	return SavedNetworkPorts, nil
 }
 
-func pruneUnreachablePorts(ports []OsSerialPort) ([]OsSerialPort, error) {
-	timeout := time.Duration(5 * time.Second)
-
-	ports = Filter(ports, func(port OsSerialPort) bool {
-		// Check if the port 80 is open
-		conn, err := net.DialTimeout("tcp", port.Name+":80", timeout)
+func checkAvailability(ip string) bool {
+	timeout := time.Duration(1500 * time.Millisecond)
+	// Check if the port 80 is open
+	conn, err := net.DialTimeout("tcp", ip+":80", timeout)
+	if err != nil {
+		log.Println(err)
+		// Check if the port 22 is open
+		conn, err = net.DialTimeout("tcp", ip+":22", timeout)
 		if err != nil {
 			log.Println(err)
-			// Check if the port 22 is open
-			conn, err = net.DialTimeout("tcp", port.Name+":22", timeout)
-			if err != nil {
-				log.Println(err)
-				return false
-			}
-			conn.Close()
-			return true
+			return false
 		}
 		conn.Close()
 		return true
+	}
+	conn.Close()
+	return true
+}
 
-		return err == nil
+func pruneUnreachablePorts(ports []OsSerialPort) ([]OsSerialPort, error) {
+	times := 2
+
+	ports = Filter(ports, func(port OsSerialPort) bool {
+		any := false
+		for i := 0; i < times; i++ {
+			if checkAvailability(port.Name) {
+				any = true
+			}
+		}
+		return any
 	})
 
 	return ports, nil
