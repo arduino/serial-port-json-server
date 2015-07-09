@@ -49,9 +49,6 @@ func GetNetworkList() ([]OsSerialPort, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Println("###################################################à")
-	log.Printf("new ports: %+v\n", newPorts)
-	log.Printf("saved ports: %+v\n", SavedNetworkPorts)
 
 	SavedNetworkPorts = Filter(SavedNetworkPorts, func(port OsSerialPort) bool {
 		any := true
@@ -71,15 +68,11 @@ func GetNetworkList() ([]OsSerialPort, error) {
 
 	SavedNetworkPorts = append(SavedNetworkPorts, newPorts...)
 
-	log.Printf("final ports: %+v", SavedNetworkPorts)
-
 	return SavedNetworkPorts, nil
 }
 
 func pruneUnreachablePorts(ports []OsSerialPort) ([]OsSerialPort, error) {
 	timeout := time.Duration(5 * time.Second)
-
-	log.Printf("before pruning: %+v\n", ports)
 
 	ports = Filter(ports, func(port OsSerialPort) bool {
 		// Check if the port 80 is open
@@ -100,8 +93,6 @@ func pruneUnreachablePorts(ports []OsSerialPort) ([]OsSerialPort, error) {
 
 		return err == nil
 	})
-
-	log.Printf("after pruning: %+v\n", ports)
 
 	return ports, nil
 }
