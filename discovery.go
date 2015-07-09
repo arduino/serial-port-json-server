@@ -31,7 +31,7 @@ package main
 import (
 	"github.com/oleksandr/bonjour"
 	"log"
-	"net/http"
+	"net"
 	"strings"
 	"time"
 )
@@ -52,7 +52,7 @@ func GetNetworkList() ([]OsSerialPort, error) {
 
 	SavedNetworkPorts = Filter(SavedNetworkPorts, func(port OsSerialPort) bool {
 		any := true
-		for _, p := range SavedNetworkPorts {
+		for _, p := range newPorts {
 			if p.Name == port.Name && p.FriendlyName == port.FriendlyName {
 				any = false
 				return any
@@ -71,15 +71,36 @@ func GetNetworkList() ([]OsSerialPort, error) {
 	return SavedNetworkPorts, nil
 }
 
-func pruneUnreachablePorts(ports []OsSerialPort) ([]OsSerialPort, error) {
-	timeout := time.Duration(2 * time.Second)
-	client := http.Client{
-		Timeout: timeout,
+func checkAvailability(ip string) bool {
+	timeout := time.Duration(1500 * time.Millisecond)
+	// Check if the port 80 is open
+	conn, err := net.DialTimeout("tcp", ip+":80", timeout)
+	if err != nil {
+		log.Println(err)
+		// Check if the port 22 is open
+		conn, err = net.DialTimeout("tcp", ip+":22", timeout)
+		if err != nil {
+			log.Println(err)
+			return false
+		}
+		conn.Close()
+		return true
 	}
+	conn.Close()
+	return true
+}
+
+func pruneUnreachablePorts(ports []OsSerialPort) ([]OsSerialPort, error) {
+	times := 2
 
 	ports = Filter(ports, func(port OsSerialPort) bool {
-		res, err := client.Head("http://" + port.Name)
-		return err == nil && res.StatusCode == 200
+		any := false
+		for i := 0; i < times; i++ {
+			if checkAvailability(port.Name) {
+				any = true
+			}
+		}
+		return any
 	})
 
 	return ports, nil
@@ -104,7 +125,6 @@ func getPorts() ([]OsSerialPort, error) {
 	arrPorts := []OsSerialPort{}
 	go func(results chan *bonjour.ServiceEntry, exitCh chan<- bool) {
 		for e := range results {
-			log.Printf("%s %s %d %s", e.Instance, e.AddrIPv4, e.Port, e.Text)
 			var boardInfosSlice []string
 			for _, element := range e.Text {
 				if strings.Contains(element, "board=yun") {
