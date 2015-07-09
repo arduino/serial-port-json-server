@@ -266,7 +266,7 @@ func startDaemon() {
 		}))
 
 		r.GET("/", homeHandler)
-		r.GET("/upload", uploadHandler)
+		r.POST("/upload", uploadHandler)
 		r.GET("/socket.io/", socketHandler)
 		r.POST("/socket.io/", socketHandler)
 		r.Handle("WS", "/socket.io/", socketHandler)
