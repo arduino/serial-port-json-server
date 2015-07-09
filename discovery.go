@@ -31,7 +31,7 @@ package main
 import (
 	"github.com/oleksandr/bonjour"
 	"log"
-	"net/http"
+	"net"
 	"strings"
 	"time"
 )
@@ -49,10 +49,13 @@ func GetNetworkList() ([]OsSerialPort, error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Println("###################################################à")
+	log.Printf("new ports: %+v\n", newPorts)
+	log.Printf("saved ports: %+v\n", SavedNetworkPorts)
 
 	SavedNetworkPorts = Filter(SavedNetworkPorts, func(port OsSerialPort) bool {
 		any := true
-		for _, p := range SavedNetworkPorts {
+		for _, p := range newPorts {
 			if p.Name == port.Name && p.FriendlyName == port.FriendlyName {
 				any = false
 				return any
@@ -68,26 +71,37 @@ func GetNetworkList() ([]OsSerialPort, error) {
 
 	SavedNetworkPorts = append(SavedNetworkPorts, newPorts...)
 
+	log.Printf("final ports: %+v", SavedNetworkPorts)
+
 	return SavedNetworkPorts, nil
 }
 
 func pruneUnreachablePorts(ports []OsSerialPort) ([]OsSerialPort, error) {
 	timeout := time.Duration(5 * time.Second)
-	times := 3
-	client := http.Client{
-		Timeout: timeout,
-	}
+
+	log.Printf("before pruning: %+v\n", ports)
 
 	ports = Filter(ports, func(port OsSerialPort) bool {
-		any := false
-		for i := 0; i < times && !any; i++ {
-			res, err := client.Head("http://" + port.Name)
-			if err == nil && res.StatusCode == 200 {
-				any = true
+		// Check if the port 80 is open
+		conn, err := net.DialTimeout("tcp", port.Name+":80", timeout)
+		if err != nil {
+			log.Println(err)
+			// Check if the port 22 is open
+			conn, err = net.DialTimeout("tcp", port.Name+":22", timeout)
+			if err != nil {
+				log.Println(err)
+				return false
 			}
+			conn.Close()
+			return true
 		}
-		return any
+		conn.Close()
+		return true
+
+		return err == nil
 	})
+
+	log.Printf("after pruning: %+v\n", ports)
 
 	return ports, nil
 }
@@ -111,7 +125,6 @@ func getPorts() ([]OsSerialPort, error) {
 	arrPorts := []OsSerialPort{}
 	go func(results chan *bonjour.ServiceEntry, exitCh chan<- bool) {
 		for e := range results {
-			log.Printf("%s %s %d %s", e.Instance, e.AddrIPv4, e.Port, e.Text)
 			var boardInfosSlice []string
 			for _, element := range e.Text {
 				if strings.Contains(element, "board=yun") {
