@@ -448,7 +448,9 @@ func discoverLoop() {
 
 	go func() {
 		for {
-			spListDual(false)
+			if !compiling {
+				spListDual(false)
+			}
 			time.Sleep(2 * time.Second)
 		}
 	}()
