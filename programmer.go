@@ -153,6 +153,7 @@ func spProgramRW(portname string, boardname string, boardname_rewrite string, fi
 	compiling = true
 
 	defer func() {
+		time.Sleep(1 * time.Second)
 		compiling = false
 	}()
 
